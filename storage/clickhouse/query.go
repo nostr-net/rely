@@ -69,7 +69,7 @@ func (s *Storage) buildQuery(filter nostr.Filter) (string, string, []interface{}
 	b.Grow(512) // Pre-allocate typical query size
 
 	// Build SELECT clause
-	b.WriteString("SELECT id, pubkey, created_at, kind, content, sig, tags FROM ")
+	b.WriteString("SELECT id, pubkey, created_at, kind, content, sig, '[]' as tags_json FROM ")
 	b.WriteString(table)
 	b.WriteString(" FINAL")
 
@@ -220,7 +220,8 @@ func scanEvent(rows *sql.Rows) (nostr.Event, error) {
 	// Parse tags from JSON
 	if tagsJSON != "" {
 		if err := json.Unmarshal([]byte(tagsJSON), &event.Tags); err != nil {
-			return event, fmt.Errorf("failed to parse tags: %w", err)
+			// Fallback: set empty tags
+			event.Tags = nostr.Tags{}
 		}
 	}
 

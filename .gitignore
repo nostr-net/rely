@@ -1,1 +1,91 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Dependency directories (remove comment to include)
+# vendor/
+
+# Go workspace file
+go.work
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build and dist directories
+bin/
+build/
+dist/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Log files
 **/*.log
+logs/
+
+# Coverage reports
+coverage.txt
+coverage.html
+coverage.out
+*.cover
+
+# Environment files
+.env
+.env.local
+.env.production
+.env.staging
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Configuration overrides
+config.local.yaml
+config.local.json
+
+# OS generated files
+Thumbs.db
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ClickHouse specific
+*.clickhouse
+clickhouse-data/
+
+# Performance benchmarks and profiling
+*.prof
+*.pprof
+*.cpu
+*.mem
+
+# Development artifacts
+debug/
+test-results/
+benchmark-results/
+
+# Local development files
+.local/
+local-data/
+dev-data/
