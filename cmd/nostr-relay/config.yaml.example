@@ -1,0 +1,56 @@
+# Nostr Relay Configuration
+# Copy this file to config.yaml and customize for your deployment
+
+server:
+  # Address to listen on (0.0.0.0 for all interfaces)
+  listen: "0.0.0.0:3334"
+
+  # Relay domain (used for NIP-11 and NIP-42)
+  domain: "relay.example.com"
+
+  # Event processing queue capacity
+  queue_capacity: 2048
+
+  # Number of concurrent event processors
+  max_processors: 8
+
+  # Maximum events to return per REQ
+  client_response_limit: 500
+
+clickhouse:
+  # ClickHouse connection string
+  # Format: clickhouse://host:port/database
+  dsn: "clickhouse://localhost:9000/nostr"
+
+  # Number of events to batch before inserting
+  batch_size: 1000
+
+  # Maximum time to wait before flushing batch
+  flush_interval: 1s
+
+  # Connection pool settings
+  max_open_conns: 10
+  max_idle_conns: 5
+
+monitoring:
+  # How often to log statistics
+  stats_interval: 30s
+
+  # HTTP port for health checks and metrics (0 to disable)
+  health_check_port: 8080
+
+  # Enable Prometheus metrics
+  enable_metrics: true
+
+limits:
+  # Maximum event size in bytes (64KB default)
+  max_event_size: 65536
+
+  # Maximum subscriptions per client
+  max_subscriptions: 20
+
+  # Maximum filters per subscription
+  max_filters_per_sub: 10
+
+  # Client connection timeout in seconds
+  connection_timeout: 300

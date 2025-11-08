@@ -1,0 +1,28 @@
+# Binary
+nostr-relay
+nostr-relay-*
+
+# Configuration (don't commit actual config)
+config.yaml
+
+# Logs
+*.log
+
+# Test coverage
+coverage.out
+*.test
+
+# Development
+.air.toml
+tmp/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
