@@ -17,31 +17,31 @@ help:
 
 # Run all tests
 test:
-	go test -v -timeout 10m ./...
+	GOTMPDIR=$(HOME)/go-tmp go test -v -timeout 10m ./...
 
 # Run all storage tests
 test-storage:
-	go test -v -timeout 10m ./storage/clickhouse/...
+	GOTMPDIR=$(HOME)/go-tmp go test -v -timeout 10m ./storage/clickhouse/...
 
 # Run unit tests only (fast)
 test-unit:
-	go test -v -short -timeout 2m ./storage/clickhouse/ -run "^Test[^F].*"
+	GOTMPDIR=$(HOME)/go-tmp go test -v -short -timeout 2m ./storage/clickhouse/ -run "^Test[^F].*"
 
 # Run integration tests
 test-integration:
-	go test -v -timeout 5m ./storage/clickhouse/ -run "TestInsert.*|TestQuery.*|TestCount.*|TestConcurrent.*|TestDeduplic.*|TestLarge.*|TestComplex.*"
+	GOTMPDIR=$(HOME)/go-tmp go test -v -timeout 5m ./storage/clickhouse/ -run "TestInsert.*|TestQuery.*|TestCount.*|TestConcurrent.*|TestDeduplic.*|TestLarge.*|TestComplex.*"
 
 # Run functional tests (requires internet connection)
 test-functional:
-	go test -v -timeout 10m ./storage/clickhouse/ -run "TestFunctional.*"
+	GOTMPDIR=$(HOME)/go-tmp go test -v -timeout 10m ./storage/clickhouse/ -run "TestFunctional.*"
 
 # Run analytics tests
 test-analytics:
-	go test -v -timeout 5m ./storage/clickhouse/ -run "TestAnalytics.*|TestGet.*|TestRefresh.*|TestSample.*"
+	GOTMPDIR=$(HOME)/go-tmp go test -v -timeout 5m ./storage/clickhouse/ -run "TestAnalytics.*|TestGet.*|TestRefresh.*|TestSample.*"
 
 # Run tests in short mode (skip slow tests)
 test-short:
-	go test -v -short -timeout 2m ./storage/clickhouse/...
+	GOTMPDIR=$(HOME)/go-tmp go test -v -short -timeout 2m ./storage/clickhouse/...
 
 # Generate coverage report
 test-coverage:
@@ -52,18 +52,18 @@ test-coverage:
 
 # Start ClickHouse test environment
 docker-test-up:
-	docker-compose -f docker-compose.test.yml up -d
+	docker compose -f docker-compose.test.yml up -d
 	@echo "Waiting for ClickHouse to be ready..."
 	@sleep 10
-	@docker-compose -f docker-compose.test.yml ps
+	@docker compose -f docker-compose.test.yml ps
 
 # Stop ClickHouse test environment
 docker-test-down:
-	docker-compose -f docker-compose.test.yml down
+	docker compose -f docker-compose.test.yml down
 
 # Clean ClickHouse test environment (removes volumes)
 docker-test-clean:
-	docker-compose -f docker-compose.test.yml down -v
+	docker compose -f docker-compose.test.yml down -v
 
 # Run tests with Docker environment
 docker-test: docker-test-up
