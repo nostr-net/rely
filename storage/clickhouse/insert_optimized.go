@@ -16,13 +16,15 @@ func (s *Storage) batchInsertOptimized(ctx context.Context, events []*nostr.Even
 	}
 
 	// Use standard SQL prepared statement (compatible with database/sql)
-	stmt, err := s.db.PrepareContext(ctx, `
-		INSERT INTO nostr.events (
+	query := fmt.Sprintf(`
+		INSERT INTO %s.events (
 			id, pubkey, created_at, kind, content, sig,
 			tags, tag_e, tag_p, tag_a, tag_t, tag_d, tag_g, tag_r,
 			relay_received_at, version
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`)
+	`, s.database)
+
+	stmt, err := s.db.PrepareContext(ctx, query)
 	if err != nil {
 		return fmt.Errorf("failed to prepare statement: %w", err)
 	}

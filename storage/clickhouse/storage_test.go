@@ -126,6 +126,40 @@ func runMigrations(s *Storage) error {
 		) ENGINE = ReplacingMergeTree(version, deleted)
 		ORDER BY (kind, created_at)
 		PRIMARY KEY (kind)`,
+
+		// Create by_tag_p view (CRITICAL for testing tag routing)
+		`CREATE TABLE IF NOT EXISTS nostr.events_by_tag_p (
+			tag_p_value String,
+			created_at UInt32,
+			id String,
+			pubkey String,
+			kind UInt16,
+			content String,
+			tags Array(Array(String)),
+			sig String,
+			relay_received_at UInt32,
+			deleted UInt8 DEFAULT 0,
+			version UInt32
+		) ENGINE = ReplacingMergeTree(version, deleted)
+		ORDER BY (tag_p_value, created_at)
+		PRIMARY KEY (tag_p_value)`,
+
+		// Create by_tag_e view (CRITICAL for testing tag routing)
+		`CREATE TABLE IF NOT EXISTS nostr.events_by_tag_e (
+			tag_e_value String,
+			created_at UInt32,
+			id String,
+			pubkey String,
+			kind UInt16,
+			content String,
+			tags Array(Array(String)),
+			sig String,
+			relay_received_at UInt32,
+			deleted UInt8 DEFAULT 0,
+			version UInt32
+		) ENGINE = ReplacingMergeTree(version, deleted)
+		ORDER BY (tag_e_value, created_at)
+		PRIMARY KEY (tag_e_value)`,
 	}
 
 	for _, migration := range migrations {

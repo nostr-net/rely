@@ -28,23 +28,42 @@ func (s *Storage) buildCountQuery(filter nostr.Filter) (string, string, []interf
 	var table string
 	var args []interface{}
 
+	// Count how many different tag types are requested
+	tagTypeCount := 0
+	if len(filter.Tags["p"]) > 0 {
+		tagTypeCount++
+	}
+	if len(filter.Tags["e"]) > 0 {
+		tagTypeCount++
+	}
+	if len(filter.Tags["a"]) > 0 {
+		tagTypeCount++
+	}
+	if len(filter.Tags["t"]) > 0 {
+		tagTypeCount++
+	}
+	if len(filter.Tags["d"]) > 0 {
+		tagTypeCount++
+	}
+
 	// Choose optimal table based on filter characteristics
+	// IMPORTANT: Only use tag-specific tables when ONLY that tag type is requested
 	switch {
 	case len(filter.IDs) > 0:
-		table = "nostr.events"
+		table = fmt.Sprintf("%s.events", s.database)
 	case len(filter.Authors) > 0:
-		table = "nostr.events_by_author"
+		table = fmt.Sprintf("%s.events_by_author", s.database)
 	case len(filter.Kinds) > 0:
-		table = "nostr.events_by_kind"
+		table = fmt.Sprintf("%s.events_by_kind", s.database)
+	case tagTypeCount == 1 && len(filter.Tags["p"]) > 0:
+		// Only use tag_p table if it's the ONLY tag filter
+		table = fmt.Sprintf("%s.events_by_tag_p", s.database)
+	case tagTypeCount == 1 && len(filter.Tags["e"]) > 0:
+		// Only use tag_e table if it's the ONLY tag filter
+		table = fmt.Sprintf("%s.events_by_tag_e", s.database)
 	default:
-		// Check for tag filters
-		if pTags := filter.Tags["p"]; len(pTags) > 0 {
-			table = "nostr.events_by_tag_p"
-		} else if eTags := filter.Tags["e"]; len(eTags) > 0 {
-			table = "nostr.events_by_tag_e"
-		} else {
-			table = "nostr.events"
-		}
+		// Fall back to base table for multiple tag types or other cases
+		table = fmt.Sprintf("%s.events", s.database)
 	}
 
 	// Build SELECT clause for counting
@@ -100,7 +119,7 @@ func (s *Storage) buildCountQuery(filter nostr.Filter) (string, string, []interf
 
 	// Tag filters
 	if eTags := filter.Tags["e"]; len(eTags) > 0 {
-		if table == "nostr.events_by_tag_e" {
+		if table == fmt.Sprintf("%s.events_by_tag_e", s.database) {
 			placeholders := make([]string, len(eTags))
 			for i, tag := range eTags {
 				placeholders[i] = "?"
@@ -114,7 +133,7 @@ func (s *Storage) buildCountQuery(filter nostr.Filter) (string, string, []interf
 	}
 
 	if pTags := filter.Tags["p"]; len(pTags) > 0 {
-		if table == "nostr.events_by_tag_p" {
+		if table == fmt.Sprintf("%s.events_by_tag_p", s.database) {
 			placeholders := make([]string, len(pTags))
 			for i, tag := range pTags {
 				placeholders[i] = "?"
