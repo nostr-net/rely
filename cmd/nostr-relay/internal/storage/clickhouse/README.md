@@ -33,24 +33,20 @@ sudo systemctl start clickhouse-server
 
 ### 2. Initialize Schema
 
-Run the migration scripts to create the database schema:
+Run the consolidated migration to create the database schema:
 
 ```bash
 cd storage/clickhouse/migrations
 
-# Run each migration in order
-clickhouse-client < 001_create_database.sql
-clickhouse-client < 002_create_events_table.sql
-clickhouse-client < 003_create_materialized_views.sql
-clickhouse-client < 004_create_analytics_tables.sql
-clickhouse-client < 005_create_indexes.sql
+# Run the consolidated schema (includes all tables, views, and indexes)
+clickhouse-client < 001_consolidated_schema.sql
 ```
 
-Or use the provided initialization script:
-
-```bash
-./init_schema.sh
-```
+The consolidated schema includes:
+- Main events table with ReplacingMergeTree for deduplication
+- Materialized views for optimized queries (by_author, by_kind, by_tag_p, by_tag_e)
+- Analytics tables for reporting (user_profiles, follower_counts, engagement metrics, etc.)
+- Performance indexes (bloom filters, minmax, tokenbf for full-text search)
 
 ### 3. Run Example Relay
 

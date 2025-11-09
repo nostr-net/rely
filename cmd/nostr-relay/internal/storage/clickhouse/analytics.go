@@ -9,12 +9,16 @@ import (
 
 // AnalyticsService provides optimized read queries for reports and analytics
 type AnalyticsService struct {
-	db *sql.DB
+	db       *sql.DB
+	database string
 }
 
 // NewAnalyticsService creates a new analytics service
-func NewAnalyticsService(db *sql.DB) *AnalyticsService {
-	return &AnalyticsService{db: db}
+func NewAnalyticsService(db *sql.DB, database string) *AnalyticsService {
+	return &AnalyticsService{
+		db:       db,
+		database: database,
+	}
 }
 
 // ==============================================================================
@@ -38,25 +42,25 @@ type ActiveUsersReport struct {
 // Uses pre-aggregated tables for fast results (sub-second query)
 // FIXED: Properly aggregates SummingMergeTree follower_counts
 func (a *AnalyticsService) GetActiveUsers(ctx context.Context, startDate, endDate time.Time, minFollowers int) (*ActiveUsersReport, error) {
-	query := `
+	query := fmt.Sprintf(`
 		WITH active_pubkeys AS (
 			SELECT DISTINCT pubkey
-			FROM nostr.events FINAL
+			FROM %s.events FINAL
 			WHERE created_at >= toUInt32(?)
 			  AND created_at < toUInt32(?)
 			  AND deleted = 0
 		),
 		follower_agg AS (
 			SELECT pubkey, sum(follower_count) as followers
-			FROM nostr.follower_counts
+			FROM %s.follower_counts
 			GROUP BY pubkey
 		),
 		qualified_users AS (
 			SELECT a.pubkey
 			FROM active_pubkeys a
 			LEFT JOIN follower_agg f ON a.pubkey = f.pubkey
-			LEFT JOIN nostr.user_profiles p ON a.pubkey = p.pubkey
-			WHERE f.followers >= ? OR f.followers IS NULL
+			LEFT JOIN %s.user_profiles p ON a.pubkey = p.pubkey
+			WHERE coalesce(f.followers, 0) >= ?
 		)
 		SELECT
 			uniq(q.pubkey) as total_active,
@@ -64,12 +68,12 @@ func (a *AnalyticsService) GetActiveUsers(ctx context.Context, startDate, endDat
 			uniqIf(p.pubkey, p.has_lightning = 1) as with_lightning,
 			count(e.id) as event_count
 		FROM qualified_users q
-		LEFT JOIN nostr.user_profiles p ON q.pubkey = p.pubkey
-		LEFT JOIN nostr.events e ON q.pubkey = e.pubkey
+		LEFT JOIN %s.user_profiles p ON q.pubkey = p.pubkey
+		LEFT JOIN %s.events e ON q.pubkey = e.pubkey
 			AND e.created_at >= toUInt32(?)
 			AND e.created_at < toUInt32(?)
 			AND e.deleted = 0
-	`
+	`, a.database, a.database, a.database, a.database, a.database)
 
 	var report ActiveUsersReport
 	var totalActive, withNIP05, withLN, eventCount uint64
@@ -101,7 +105,7 @@ func (a *AnalyticsService) GetActiveUsers(ctx context.Context, startDate, endDat
 // GetDailyActiveUsers returns daily active user counts using pre-aggregated table
 // OPTIMIZED: Uses AggregatingMergeTree for sub-second query on billions of events
 func (a *AnalyticsService) GetDailyActiveUsers(ctx context.Context, days int) ([]DailyUserStats, error) {
-	query := `
+	query := fmt.Sprintf(`
 		SELECT
 			date,
 			uniqMerge(active_users) as active_users,
@@ -110,11 +114,11 @@ func (a *AnalyticsService) GetDailyActiveUsers(ctx context.Context, days int) ([
 			sum(reactions) as reactions,
 			sum(reposts) as reposts,
 			sum(zaps) as zaps
-		FROM nostr.daily_active_users
+		FROM %s.daily_active_users
 		WHERE date >= today() - ?
 		GROUP BY date
 		ORDER BY date DESC
-	`
+	`, a.database)
 
 	rows, err := a.db.QueryContext(ctx, query, days)
 	if err != nil {
@@ -164,7 +168,7 @@ type DailyUserStats struct {
 // TopUsersByFollowers returns users with most followers
 // OPTIMIZED: Uses pre-aggregated follower_counts table
 func (a *AnalyticsService) TopUsersByFollowers(ctx context.Context, limit int) ([]UserFollowerStats, error) {
-	query := `
+	query := fmt.Sprintf(`
 		SELECT
 			f.pubkey,
 			sum(f.follower_count) as followers,
@@ -172,12 +176,12 @@ func (a *AnalyticsService) TopUsersByFollowers(ctx context.Context, limit int) (
 			p.name,
 			p.nip05,
 			p.has_nip05
-		FROM nostr.follower_counts f
-		LEFT JOIN nostr.user_profiles p ON f.pubkey = p.pubkey
+		FROM %s.follower_counts f
+		LEFT JOIN %s.user_profiles p ON f.pubkey = p.pubkey
 		GROUP BY f.pubkey, p.name, p.nip05, p.has_nip05
 		ORDER BY followers DESC
 		LIMIT ?
-	`
+	`, a.database, a.database)
 
 	rows, err := a.db.QueryContext(ctx, query, limit)
 	if err != nil {
@@ -239,7 +243,7 @@ type EventKindStats struct {
 // GetEventKindStats returns statistics by event kind over time
 // OPTIMIZED: Uses hourly_stats aggregating table with PREWHERE
 func (a *AnalyticsService) GetEventKindStats(ctx context.Context, kinds []int, startDate, endDate time.Time) ([]EventKindStats, error) {
-	query := `
+	query := fmt.Sprintf(`
 		SELECT
 			kind,
 			toDate(hour) as date,
@@ -247,13 +251,13 @@ func (a *AnalyticsService) GetEventKindStats(ctx context.Context, kinds []int, s
 			uniqMerge(unique_authors) as unique_authors,
 			avg(total_size) / nullIf(sum(event_count), 0) as avg_size,
 			sum(total_size) / 1024 / 1024 as total_mb
-		FROM nostr.hourly_stats
+		FROM %s.hourly_stats
 		PREWHERE kind IN ?
 		WHERE hour >= toDateTime(?)
 		  AND hour < toDateTime(?)
 		GROUP BY kind, date
 		ORDER BY date DESC, count DESC
-	`
+	`, a.database)
 
 	rows, err := a.db.QueryContext(ctx, query, kinds, startDate.Unix(), endDate.Unix())
 	if err != nil {
@@ -300,7 +304,7 @@ type TrendingHashtag struct {
 // GetTrendingHashtags returns trending hashtags for a time period
 // OPTIMIZED: Uses pre-aggregated trending_hashtags table with time-weighted scoring
 func (a *AnalyticsService) GetTrendingHashtags(ctx context.Context, hours int, limit int) ([]TrendingHashtag, error) {
-	query := `
+	query := fmt.Sprintf(`
 		WITH time_weighted AS (
 			SELECT
 				hashtag,
@@ -308,7 +312,7 @@ func (a *AnalyticsService) GetTrendingHashtags(ctx context.Context, hours int, l
 				sum(unique_authors) as total_authors,
 				-- Weight recent hours more heavily
 				sum(usage_count * (1.0 / (toFloat64(dateDiff('hour', toDateTime(date) + toIntervalHour(hour), now())) + 1))) as trend_score
-			FROM nostr.trending_hashtags
+			FROM %s.trending_hashtags
 			WHERE toDateTime(date) + toIntervalHour(hour) >= now() - INTERVAL ? HOUR
 			GROUP BY hashtag
 			HAVING total_usage >= 5  -- Minimum threshold
@@ -321,7 +325,7 @@ func (a *AnalyticsService) GetTrendingHashtags(ctx context.Context, hours int, l
 		FROM time_weighted
 		ORDER BY trend_score DESC
 		LIMIT ?
-	`
+	`, a.database)
 
 	rows, err := a.db.QueryContext(ctx, query, hours, limit)
 	if err != nil {
@@ -368,7 +372,7 @@ type EngagedEvent struct {
 // OPTIMIZED: Uses event_engagement aggregated table
 // FIXED: JOINs with events table to get metadata (author, created_at, kind)
 func (a *AnalyticsService) GetTopEngagedEvents(ctx context.Context, hours int, limit int) ([]EngagedEvent, error) {
-	query := `
+	query := fmt.Sprintf(`
 		SELECT
 			eng.event_id,
 			e.pubkey as author_pubkey,
@@ -380,14 +384,14 @@ func (a *AnalyticsService) GetTopEngagedEvents(ctx context.Context, hours int, l
 			sum(eng.zap_count) as zaps,
 			-- Weighted score: replies=3, reposts=2, reactions=1, zaps=5
 			sum(eng.reply_count * 3 + eng.repost_count * 2 + eng.reaction_count * 1 + eng.zap_count * 5) as score
-		FROM nostr.event_engagement eng
-		JOIN nostr.events e ON eng.event_id = e.id
+		FROM %s.event_engagement eng
+		JOIN %s.events e ON eng.event_id = e.id
 		WHERE e.created_at >= toUInt32(now() - ?)
 		  AND e.deleted = 0
 		GROUP BY eng.event_id, e.pubkey, e.created_at, e.kind
 		ORDER BY score DESC
 		LIMIT ?
-	`
+	`, a.database, a.database)
 
 	rows, err := a.db.QueryContext(ctx, query, hours*3600, limit)
 	if err != nil {
@@ -439,13 +443,13 @@ type GrowthMetrics struct {
 // GetGrowthMetrics calculates network growth metrics
 // OPTIMIZED: Uses window functions and CTEs for efficient calculation
 func (a *AnalyticsService) GetGrowthMetrics(ctx context.Context, days int) ([]GrowthMetrics, error) {
-	query := `
+	query := fmt.Sprintf(`
 		WITH daily_users AS (
 			SELECT
 				toDate(toDateTime(created_at)) as date,
 				pubkey,
 				min(created_at) OVER (PARTITION BY pubkey) as first_event_time
-			FROM nostr.events
+			FROM %s.events
 			WHERE created_at >= toUInt32(today() - ?)
 			  AND deleted = 0
 			GROUP BY date, pubkey, created_at
@@ -469,7 +473,7 @@ func (a *AnalyticsService) GetGrowthMetrics(ctx context.Context, days int) ([]Gr
 				nullIf(lag(active_users, 1, active_users) OVER (ORDER BY date), 0) as growth_rate
 		FROM daily_stats
 		ORDER BY date DESC
-	`
+	`, a.database)
 
 	rows, err := a.db.QueryContext(ctx, query, days)
 	if err != nil {
@@ -520,7 +524,7 @@ type ContentSizeDistribution struct {
 // GetContentSizeDistribution returns content size distribution
 // OPTIMIZED: Uses pre-aggregated content_stats table
 func (a *AnalyticsService) GetContentSizeDistribution(ctx context.Context, days int) ([]ContentSizeDistribution, error) {
-	query := `
+	query := fmt.Sprintf(`
 		SELECT
 			date,
 			kind,
@@ -530,11 +534,11 @@ func (a *AnalyticsService) GetContentSizeDistribution(ctx context.Context, days 
 			sum(long_count) as long,
 			sum(huge_count) as huge,
 			avg(avg_size) as avg_size
-		FROM nostr.content_stats
+		FROM %s.content_stats
 		WHERE date >= today() - ?
 		GROUP BY date, kind
 		ORDER BY date DESC, kind
-	`
+	`, a.database)
 
 	rows, err := a.db.QueryContext(ctx, query, days)
 	if err != nil {
@@ -592,7 +596,7 @@ type TrendingPost struct {
 func (a *AnalyticsService) GetTrendingPosts(ctx context.Context, hours int, minScore float64, limit int) ([]TrendingPost, error) {
 	since := time.Now().Add(-time.Duration(hours) * time.Hour)
 
-	query := `
+	query := fmt.Sprintf(`
 		SELECT
 			h.event_id,
 			h.author_pubkey,
@@ -604,13 +608,13 @@ func (a *AnalyticsService) GetTrendingPosts(ctx context.Context, hours int, minS
 			h.zap_count,
 			h.zap_total_sats,
 			h.hot_score
-		FROM nostr.hot_posts h FINAL
-		JOIN nostr.events e ON h.event_id = e.id
+		FROM %s.hot_posts h FINAL
+		JOIN %s.events e ON h.event_id = e.id
 		WHERE h.hour_bucket >= toStartOfHour(?)
 		  AND h.hot_score >= ?
 		ORDER BY h.hot_score DESC
 		LIMIT ?
-	`
+	`, a.database, a.database)
 
 	rows, err := a.db.QueryContext(ctx, query, since.Unix(), minScore, limit)
 	if err != nil {
@@ -650,14 +654,14 @@ func (a *AnalyticsService) GetTrendingPosts(ctx context.Context, hours int, minS
 // Should be run periodically (every hour) to keep trending posts accurate
 // DEPRECATED: Use RefreshHotPosts() instead for full rebuild
 func (a *AnalyticsService) RefreshHotScores(ctx context.Context, daysBack int) error {
-	query := `
-		ALTER TABLE nostr.hot_posts
+	query := fmt.Sprintf(`
+		ALTER TABLE %s.hot_posts
 		UPDATE
 			hot_score = engagement_score *
 				exp(-0.693 * (toFloat64(now()) - toFloat64(created_at)) / 86400.0),
 			last_updated = toUInt32(now())
 		WHERE hour_bucket >= toStartOfHour(now() - INTERVAL ? DAY)
-	`
+	`, a.database)
 
 	_, err := a.db.ExecContext(ctx, query, daysBack)
 	if err != nil {
@@ -672,18 +676,18 @@ func (a *AnalyticsService) RefreshHotScores(ctx context.Context, daysBack int) e
 // FIXED: Replaces the broken materialized view approach
 func (a *AnalyticsService) RefreshHotPosts(ctx context.Context, hoursBack int) error {
 	// Step 1: Clean up old entries (older than hoursBack)
-	deleteQuery := `
-		ALTER TABLE nostr.hot_posts
+	deleteQuery := fmt.Sprintf(`
+		ALTER TABLE %s.hot_posts
 		DELETE WHERE hour_bucket < toStartOfHour(now() - INTERVAL ? HOUR)
-	`
+	`, a.database)
 	_, err := a.db.ExecContext(ctx, deleteQuery, hoursBack)
 	if err != nil {
 		return fmt.Errorf("failed to clean old hot_posts: %w", err)
 	}
 
 	// Step 2: Insert/update hot posts from last N hours
-	insertQuery := `
-		INSERT INTO nostr.hot_posts
+	insertQuery := fmt.Sprintf(`
+		INSERT INTO %s.hot_posts
 		SELECT
 			e.id as event_id,
 			e.pubkey as author_pubkey,
@@ -698,13 +702,13 @@ func (a *AnalyticsService) RefreshHotPosts(ctx context.Context, hoursBack int) e
 			engagement_score * exp(-0.693 * (toFloat64(now()) - toFloat64(e.created_at)) / 86400.0) as hot_score,
 			toStartOfHour(toDateTime(e.created_at)) as hour_bucket,
 			toUInt32(now()) as last_updated
-		FROM nostr.events e
-		LEFT JOIN nostr.event_engagement eng ON e.id = eng.event_id
+		FROM %s.events e
+		LEFT JOIN %s.event_engagement eng ON e.id = eng.event_id
 		WHERE e.kind = 1
 		  AND e.created_at >= toUInt32(now() - ? * 3600)
 		  AND e.deleted = 0
 		GROUP BY e.id, e.pubkey, e.created_at, e.kind
-	`
+	`, a.database, a.database, a.database)
 	_, err = a.db.ExecContext(ctx, insertQuery, hoursBack)
 	if err != nil {
 		return fmt.Errorf("failed to refresh hot_posts: %w", err)
@@ -719,19 +723,52 @@ func (a *AnalyticsService) RefreshHotPosts(ctx context.Context, hoursBack int) e
 
 // SampleEvents returns a random sample of events for analysis
 // OPTIMIZED: Uses ClickHouse SAMPLE clause for very fast sampling on huge datasets
-func (a *AnalyticsService) SampleEvents(ctx context.Context, sampleRate float64, filters string) ([]string, error) {
+// SECURITY FIX: Removed dangerous 'filters' parameter that allowed SQL injection
+func (a *AnalyticsService) SampleEvents(ctx context.Context, sampleRate float64) ([]string, error) {
 	if sampleRate <= 0 || sampleRate > 1 {
 		return nil, fmt.Errorf("sample rate must be between 0 and 1")
 	}
 
 	query := fmt.Sprintf(`
 		SELECT id
-		FROM nostr.events SAMPLE ?
-		WHERE deleted = 0 %s
+		FROM %s.events SAMPLE ?
+		WHERE deleted = 0
 		LIMIT 1000
-	`, filters)
+	`, a.database)
 
 	rows, err := a.db.QueryContext(ctx, query, sampleRate)
+	if err != nil {
+		return nil, fmt.Errorf("failed to sample events: %w", err)
+	}
+	defer rows.Close()
+
+	var eventIDs []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		eventIDs = append(eventIDs, id)
+	}
+
+	return eventIDs, rows.Err()
+}
+
+// SampleEventsWithKind returns a random sample of events for a specific kind
+// Safe alternative to the old filters parameter approach
+func (a *AnalyticsService) SampleEventsWithKind(ctx context.Context, sampleRate float64, kind uint16) ([]string, error) {
+	if sampleRate <= 0 || sampleRate > 1 {
+		return nil, fmt.Errorf("sample rate must be between 0 and 1")
+	}
+
+	query := fmt.Sprintf(`
+		SELECT id
+		FROM %s.events SAMPLE ?
+		WHERE deleted = 0 AND kind = ?
+		LIMIT 1000
+	`, a.database)
+
+	rows, err := a.db.QueryContext(ctx, query, sampleRate, kind)
 	if err != nil {
 		return nil, fmt.Errorf("failed to sample events: %w", err)
 	}

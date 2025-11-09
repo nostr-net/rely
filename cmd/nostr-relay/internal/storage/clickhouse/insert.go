@@ -126,13 +126,15 @@ func (s *Storage) batchInsert(ctx context.Context, events []*nostr.Event) error 
 	}
 	defer tx.Rollback()
 
-	stmt, err := tx.PrepareContext(ctx, `
-		INSERT INTO nostr.events (
+	query := fmt.Sprintf(`
+		INSERT INTO %s.events (
 			id, pubkey, created_at, kind, content, sig,
 			tags, tag_e, tag_p, tag_a, tag_t, tag_d, tag_g, tag_r,
 			relay_received_at, version
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`)
+	`, s.database)
+
+	stmt, err := tx.PrepareContext(ctx, query)
 	if err != nil {
 		return fmt.Errorf("failed to prepare statement: %w", err)
 	}

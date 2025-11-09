@@ -1,0 +1,55 @@
+[Unit]
+Description=Nostr Relay with ClickHouse Storage
+Documentation=https://github.com/nostr-net/rely
+After=network-online.target clickhouse-server.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=nostr
+Group=nostr
+WorkingDirectory=/opt/nostr-relay
+
+# Main service
+ExecStart=/opt/nostr-relay/nostr-relay
+ExecReload=/bin/kill -HUP $MAINPID
+
+# Restart policy
+Restart=on-failure
+RestartSec=10s
+KillMode=process
+TimeoutStopSec=30
+
+# Environment
+Environment="CONFIG_FILE=/opt/nostr-relay/config.yaml"
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/nostr-relay
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictRealtime=true
+RestrictNamespaces=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictSUIDSGID=true
+RemoveIPC=true
+PrivateMounts=true
+SystemCallArchitectures=native
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=nostr-relay
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target

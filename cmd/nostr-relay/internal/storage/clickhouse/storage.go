@@ -14,7 +14,8 @@ import (
 
 // Storage implements ClickHouse-backed storage for Nostr events
 type Storage struct {
-	db *sql.DB
+	db       *sql.DB
+	database string // Database name extracted from DSN
 
 	// Batch insertion configuration
 	batchSize     int
@@ -49,8 +50,49 @@ func DefaultConfig() Config {
 	}
 }
 
+// extractDatabaseFromDSN extracts the database name from the DSN
+// DSN format: clickhouse://host:port/database
+func extractDatabaseFromDSN(dsn string) string {
+	// Find the last / to get the database name
+	lastSlash := -1
+	for i := len(dsn) - 1; i >= 0; i-- {
+		if dsn[i] == '/' {
+			lastSlash = i
+			break
+		}
+	}
+	if lastSlash == -1 || lastSlash == len(dsn)-1 {
+		return "nostr" // Default database name
+	}
+
+	// Extract database name (everything after the last /)
+	dbName := dsn[lastSlash+1:]
+
+	// Remove query parameters if present
+	if qIdx := -1; qIdx < len(dbName); qIdx++ {
+		for i := 0; i < len(dbName); i++ {
+			if dbName[i] == '?' {
+				qIdx = i
+				break
+			}
+		}
+		if qIdx > 0 {
+			dbName = dbName[:qIdx]
+		}
+		break
+	}
+
+	if dbName == "" {
+		return "nostr" // Default database name
+	}
+	return dbName
+}
+
 // NewStorage creates a new ClickHouse storage instance
 func NewStorage(cfg Config) (*Storage, error) {
+	// Extract database name from DSN
+	database := extractDatabaseFromDSN(cfg.DSN)
+
 	// Open database connection
 	db, err := sql.Open("clickhouse", cfg.DSN)
 	if err != nil {
@@ -72,6 +114,7 @@ func NewStorage(cfg Config) (*Storage, error) {
 
 	storage := &Storage{
 		db:            db,
+		database:      database,
 		batchSize:     cfg.BatchSize,
 		flushInterval: cfg.FlushInterval,
 		batchChan:     make(chan *nostr.Event, cfg.BatchSize*2),
@@ -82,8 +125,8 @@ func NewStorage(cfg Config) (*Storage, error) {
 	// Start batch inserter
 	go storage.batchInserter()
 
-	log.Printf("ClickHouse storage initialized (batch_size=%d, flush_interval=%s)",
-		cfg.BatchSize, cfg.FlushInterval)
+	log.Printf("ClickHouse storage initialized (database=%s, batch_size=%d, flush_interval=%s)",
+		database, cfg.BatchSize, cfg.FlushInterval)
 
 	return storage, nil
 }
@@ -160,28 +203,24 @@ func (s *Storage) Stats() (StorageStats, error) {
 	var stats StorageStats
 
 	// Get total event count
-	err := s.db.QueryRowContext(ctx, `
-		SELECT count() FROM nostr.events FINAL WHERE deleted = 0
-	`).Scan(&stats.TotalEvents)
+	query := fmt.Sprintf("SELECT count() FROM %s.events FINAL WHERE deleted = 0", s.database)
+	err := s.db.QueryRowContext(ctx, query).Scan(&stats.TotalEvents)
 	if err != nil {
 		return stats, fmt.Errorf("failed to get total events: %w", err)
 	}
 
 	// Get total storage size
-	err = s.db.QueryRowContext(ctx, `
-		SELECT sum(bytes) FROM system.parts
-		WHERE database = 'nostr' AND active = 1
-	`).Scan(&stats.TotalBytes)
+	err = s.db.QueryRowContext(ctx,
+		"SELECT sum(bytes) FROM system.parts WHERE database = ? AND active = 1",
+		s.database,
+	).Scan(&stats.TotalBytes)
 	if err != nil {
 		return stats, fmt.Errorf("failed to get total bytes: %w", err)
 	}
 
 	// Get oldest and newest event timestamps
-	err = s.db.QueryRowContext(ctx, `
-		SELECT min(created_at), max(created_at)
-		FROM nostr.events FINAL
-		WHERE deleted = 0
-	`).Scan(&stats.OldestEvent, &stats.NewestEvent)
+	query = fmt.Sprintf("SELECT min(created_at), max(created_at) FROM %s.events FINAL WHERE deleted = 0", s.database)
+	err = s.db.QueryRowContext(ctx, query).Scan(&stats.OldestEvent, &stats.NewestEvent)
 	if err != nil && err != sql.ErrNoRows {
 		return stats, fmt.Errorf("failed to get time range: %w", err)
 	}
