@@ -8,7 +8,7 @@ import (
 	"slices"
 
 	"github.com/nbd-wtf/go-nostr"
-	"github.com/pippellia-btc/rely"
+	"github.com/nostr-net/rely"
 )
 
 /*

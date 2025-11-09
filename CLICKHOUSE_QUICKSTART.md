@@ -292,7 +292,7 @@ server {
 
 ## Support
 
-- GitHub Issues: https://github.com/pippellia-btc/rely/issues
+- GitHub Issues: https://github.com/nostr-net/rely/issues
 - ClickHouse Docs: https://clickhouse.com/docs
 - Nostr NIPs: https://github.com/nostr-protocol/nips
 

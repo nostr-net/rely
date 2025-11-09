@@ -653,7 +653,7 @@ All migrations are documented in SQL:
 ### 12.1 From examples/clickhouse/main.go
 
 ```go
-import "github.com/pippellia-btc/rely/storage/clickhouse"
+import "github.com/nostr-net/rely/storage/clickhouse"
 
 // Create storage
 storage, err := clickhouse.NewStorage(clickhouse.Config{

@@ -9,9 +9,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/pippellia-btc/rely"
-	"github.com/pippellia-btc/rely/cmd/nostr-relay/config"
-	"github.com/pippellia-btc/rely/cmd/nostr-relay/internal/storage/clickhouse"
+	"github.com/nostr-net/rely"
+	"github.com/nostr-net/rely/cmd/nostr-relay/config"
+	"github.com/nostr-net/rely/storage/clickhouse"
 )
 
 const banner = `
@@ -37,7 +37,7 @@ var (
 
 func main() {
 	// Print banner
-	fmt.Println(banner)
+	fmt.Print(banner)
 	log.Printf("Version: %s | Build: %s | Commit: %s\n", version, buildTime, gitCommit)
 
 	// Load configuration

@@ -35,7 +35,7 @@ rely/
 
 ## Separation of Concerns
 
-### Rely Library (`github.com/pippellia-btc/rely`)
+### Rely Library (`github.com/nostr-net/rely`)
 
 **Purpose**: Generic Nostr relay framework
 
@@ -54,7 +54,7 @@ rely/
 
 **Usage**:
 ```go
-import "github.com/pippellia-btc/rely"
+import "github.com/nostr-net/rely"
 
 relay := rely.NewRelay(opts...)
 relay.On.Event = yourStorageImplementation

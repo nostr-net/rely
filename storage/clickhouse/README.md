@@ -1,6 +1,6 @@
 # ClickHouse Storage for Rely
 
-High-performance, scalable ClickHouse storage backend for Nostr relays built with [rely](https://github.com/pippellia-btc/rely).
+High-performance, scalable ClickHouse storage backend for Nostr relays built with [rely](https://github.com/nostr-net/rely).
 
 ## Features
 
@@ -68,8 +68,8 @@ package main
 
 import (
     "context"
-    "github.com/pippellia-btc/rely"
-    "github.com/pippellia-btc/rely/storage/clickhouse"
+    "github.com/nostr-net/rely"
+    "github.com/nostr-net/rely/storage/clickhouse"
 )
 
 func main() {
@@ -363,7 +363,7 @@ Adjust ClickHouse settings in `/etc/clickhouse-server/config.xml`:
 - [Full Design Document](../../CLICKHOUSE_DESIGN_PLAN.md)
 - [ClickHouse Documentation](https://clickhouse.com/docs)
 - [Nostr NIPs](https://github.com/nostr-protocol/nips)
-- [Rely Framework](https://github.com/pippellia-btc/rely)
+- [Rely Framework](https://github.com/nostr-net/rely)
 
 ## License
 

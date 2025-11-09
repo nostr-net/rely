@@ -21,7 +21,7 @@ func setupAnalytics(t *testing.T) *AnalyticsService {
 	}
 
 	if testAnalytics == nil {
-		testAnalytics = NewAnalyticsService(testStorage.db)
+		testAnalytics = NewAnalyticsService(testStorage.db, testStorage.database)
 
 		// Create analytics tables
 		if err := createAnalyticsTables(testStorage.db); err != nil {
@@ -156,7 +156,7 @@ func TestNewAnalyticsService(t *testing.T) {
 		t.Skip("Test storage not available")
 	}
 
-	analytics := NewAnalyticsService(testStorage.db)
+	analytics := NewAnalyticsService(testStorage.db, testStorage.database)
 	if analytics == nil {
 		t.Error("Expected non-nil analytics service")
 	}
@@ -461,7 +461,7 @@ func TestSampleEvents(t *testing.T) {
 
 	// Sample events
 	sampleRate := 0.1 // 10%
-	samples, err := analytics.SampleEvents(ctx, sampleRate, "")
+	samples, err := analytics.SampleEvents(ctx, sampleRate)
 	if err != nil {
 		t.Fatalf("SampleEvents failed: %v", err)
 	}

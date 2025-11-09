@@ -141,7 +141,7 @@ func newSystemSettings() systemSettings {
 
 func newRelayInfo() []byte {
 	info := nip11.RelayInformationDocument{
-		Software:      "https://github.com/pippellia-btc/rely",
+		Software:      "https://github.com/nostr-net/rely",
 		SupportedNIPs: []any{1, 11, 42},
 	}
 
