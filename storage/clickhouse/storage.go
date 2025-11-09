@@ -9,7 +9,7 @@ import (
 
 	_ "github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/nbd-wtf/go-nostr"
-	"github.com/pippellia-btc/rely"
+	"github.com/nostr-net/rely"
 )
 
 // Storage implements ClickHouse-backed storage for Nostr events
@@ -69,17 +69,15 @@ func extractDatabaseFromDSN(dsn string) string {
 	dbName := dsn[lastSlash+1:]
 
 	// Remove query parameters if present
-	if qIdx := -1; qIdx < len(dbName); qIdx++ {
-		for i := 0; i < len(dbName); i++ {
-			if dbName[i] == '?' {
-				qIdx = i
-				break
-			}
+	qIdx := -1
+	for i := 0; i < len(dbName); i++ {
+		if dbName[i] == '?' {
+			qIdx = i
+			break
 		}
-		if qIdx > 0 {
-			dbName = dbName[:qIdx]
-		}
-		break
+	}
+	if qIdx > 0 {
+		dbName = dbName[:qIdx]
 	}
 
 	if dbName == "" {

@@ -9,8 +9,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/pippellia-btc/rely"
-	"github.com/pippellia-btc/rely/storage/clickhouse"
+	"github.com/nostr-net/rely"
+	"github.com/nostr-net/rely/storage/clickhouse"
 )
 
 func main() {

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"sync/atomic"
 
-	"github.com/pippellia-btc/rely"
+	"github.com/nostr-net/rely"
 )
 
 /*

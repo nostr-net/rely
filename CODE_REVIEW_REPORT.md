@@ -38,14 +38,14 @@ cmd/nostr-relay/
 
 **main.go imports:**
 ```go
-"github.com/pippellia-btc/rely"                                      ✅ Library import
-"github.com/pippellia-btc/rely/cmd/nostr-relay/config"              ✅ Local config
-"github.com/pippellia-btc/rely/cmd/nostr-relay/internal/storage/clickhouse" ✅ Local storage
+"github.com/nostr-net/rely"                                      ✅ Library import
+"github.com/nostr-net/rely/cmd/nostr-relay/config"              ✅ Local config
+"github.com/nostr-net/rely/storage/clickhouse" ✅ Local storage
 ```
 
 **storage.go imports:**
 ```go
-"github.com/pippellia-btc/rely"                                      ✅ Library import only
+"github.com/nostr-net/rely"                                      ✅ Library import only
 "github.com/nbd-wtf/go-nostr"                                        ✅ Nostr library
 _ "github.com/ClickHouse/clickhouse-go/v2"                           ✅ Driver import
 ```
@@ -419,7 +419,7 @@ environment:
 ### go.mod Verification ✅
 
 **Required dependencies present:**
-- ✅ `github.com/pippellia-btc/rely` (library)
+- ✅ `github.com/nostr-net/rely` (library)
 - ✅ `github.com/ClickHouse/clickhouse-go/v2` (storage driver)
 - ✅ `github.com/nbd-wtf/go-nostr` (Nostr types)
 - ✅ `gopkg.in/yaml.v3` (configuration)

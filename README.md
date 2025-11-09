@@ -1,12 +1,12 @@
 # rely
 A framework for building super custom [Nostr](https://github.com/nostr-protocol/nostr) relays you can *rely* on. Written in Go, it's designed to be simple and performant, while providing an exeptional developer experience.
 
-<a href="https://pkg.go.dev/github.com/pippellia-btc/rely"><img src="https://pkg.go.dev/badge/github.com/pippellia-btc/rely.svg" alt="Go Reference"></a>
-[![Go Report Card](https://goreportcard.com/badge/github.com/pippellia-btc/rely)](https://goreportcard.com/report/github.com/pippellia-btc/rely)
+<a href="https://pkg.go.dev/github.com/nostr-net/rely"><img src="https://pkg.go.dev/badge/github.com/nostr-net/rely.svg" alt="Go Reference"></a>
+[![Go Report Card](https://goreportcard.com/badge/github.com/nostr-net/rely)](https://goreportcard.com/report/github.com/nostr-net/rely)
 
 ## Installation
 ```
-go get github.com/pippellia-btc/rely
+go get github.com/nostr-net/rely
 ```
 
 ## Simple and Customizable
@@ -62,7 +62,7 @@ func RejectSatan(client Client, event *nostr.Event) error {
 ```
 
 You can find all the available hooks and documentation, in [hooks.go](/hooks.go).  
-If you need additional hooks, don't hesitate to [open an issue](https://github.com/pippellia-btc/rely/issues/new)!
+If you need additional hooks, don't hesitate to [open an issue](https://github.com/nostr-net/rely/issues/new)!
 
 If you are looking for inspiration or examples, check out the [examples](/examples/) directory.
 
@@ -105,7 +105,7 @@ Rely is completely written in Go, a memory-safe and low level language that is e
 These features are extensively used in rely, creating a lock-free architecture on the hot-paths.  
 Inspired by [strfry](https://github.com/hoytech/strfry), rely also implements inverted indexes for matching broadcasted events with subscriptions, making this crucial operation very efficient. For more, check out the [architecture section](#architecture).
 
-All of these optimizations allow a [dummy implementation](https://github.com/pippellia-btc/rely/blob/main/tests/random_test.go) using rely to serve 8000+ concurrent "spammy" clients with less than 1GB of RAM on a 2017 i5 CPU (4-cores).
+All of these optimizations allow a [dummy implementation](https://github.com/nostr-net/rely/blob/main/tests/random_test.go) using rely to serve 8000+ concurrent "spammy" clients with less than 1GB of RAM on a 2017 i5 CPU (4-cores).
 
 ## Secure by Design
 
@@ -160,7 +160,7 @@ However, the Dispatcher is not the ultimate authority on the subscriptions state
 ## Well tested
 
 Rely fetures unit tests for components that make sense to test in isolation.
-More importantly, we have a [random stress test](https://github.com/pippellia-btc/rely/blob/main/tests/stress_test.go) where the relay is bombarded with thousands of connections, events, filters, and abrupt disconnections every second. This test alone allowed the discovery of hard concurrency bugs and race conditions impossible to detect with simplistic unit tests.
+More importantly, we have a [random stress test](https://github.com/nostr-net/rely/blob/main/tests/stress_test.go) where the relay is bombarded with thousands of connections, events, filters, and abrupt disconnections every second. This test alone allowed the discovery of hard concurrency bugs and race conditions impossible to detect with simplistic unit tests.
 
 ## Used by
 

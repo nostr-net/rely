@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/nbd-wtf/go-nostr"
-	"github.com/pippellia-btc/rely"
-	. "github.com/pippellia-btc/rely"
+	"github.com/nostr-net/rely"
+	. "github.com/nostr-net/rely"
 )
 
 /*

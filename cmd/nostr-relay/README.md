@@ -1,6 +1,6 @@
 # Nostr Relay with ClickHouse Storage
 
-A production-ready, high-performance Nostr relay implementation using [rely](https://github.com/pippellia-btc/rely) as a library and ClickHouse for storage.
+A production-ready, high-performance Nostr relay implementation using [rely](https://github.com/nostr-net/rely) as a library and ClickHouse for storage.
 
 ## Features
 
